@@ -8,6 +8,9 @@
 
 #import "NJUAvatarViewController.h"
 #import "NJUBadgeViewController.h"
+#import "NJUBadgeTableViewController.h"
+#import "NJUAvatarUserDefaults.h"
+#import <SVProgressHUD/SVProgressHUD.h>
 
 @interface NJUAvatarViewController ()<UINavigationControllerDelegate,UIImagePickerControllerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *avatarImageView;
@@ -15,6 +18,12 @@
 @property (weak, nonatomic) IBOutlet UIButton *reChooseBtn;
 @property (weak, nonatomic) IBOutlet UIButton *njuBadgeBtn;
 @property (weak, nonatomic) IBOutlet UIButton *seuBadgeBtn;
+@property (weak, nonatomic) IBOutlet UIButton *tsinghuaBtn;
+@property (weak, nonatomic) IBOutlet UIButton *pekingBtn;
+@property (weak, nonatomic) IBOutlet UIButton *nustBtn;
+@property (weak, nonatomic) IBOutlet UIButton *moreBtn;
+
+@property (weak, nonatomic) IBOutlet UIScrollView *scrollView;
 
 @property (weak, nonatomic) NJUBadgeViewController *badgeViewController;
 @end
@@ -24,6 +33,18 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     // Do any additional setup after loading the view.
+    _avatar = [NJUAvatarUserDefaults avatar];
+    if (!_avatar) {
+        _avatar = [UIImage imageNamed:@"avatar"];
+        [NJUAvatarUserDefaults saveAvatar:_avatar];
+    }
+    _avatarImageView.image = _avatar;
+    [SVProgressHUD dismiss];
+}
+
+- (void)viewDidLayoutSubviews
+{
+    [_scrollView setContentSize:CGSizeMake(630, 100)];
 }
 
 - (void)didReceiveMemoryWarning {
@@ -48,15 +69,34 @@
     [self badgeClick:sender];
 }
 
+- (IBAction)TsinghuaClick:(id)sender {
+    [self badgeClick:sender];
+}
+
+- (IBAction)pekingClick:(id)sender {
+    [self badgeClick:sender];
+}
+
+- (IBAction)nustClick:(id)sender {
+    [self badgeClick:sender];
+}
+- (IBAction)moreClick:(id)sender {
+    NJUBadgeTableViewController *badgeTableViewController = [self.storyboard instantiateViewControllerWithIdentifier:@"badgeTableViewController"];
+    [self.navigationController pushViewController:badgeTableViewController animated:YES];
+//    [self presentViewController:badgeTableViewController animated:YES completion:nil];
+}
+
 - (void)badgeClick:(id)sender
 {
     //获取storyboard: 通过bundle根据storyboard的名字来获取我们的storyboard,
     UIButton *badgeClick = sender;
     _badgeViewController = [self.storyboard instantiateViewControllerWithIdentifier:@"badgeViewController"];
-    [self presentViewController:_badgeViewController animated:YES completion:^{
-        [_badgeViewController showAvatar:_avatar withBadge:badgeClick.currentBackgroundImage];
-    }];
-
+//    [self presentViewController:_badgeViewController animated:YES completion:^{
+//        [_badgeViewController showAvatar:_avatar withBadge:badgeClick.currentBackgroundImage];
+//    }];
+    [NJUAvatarUserDefaults saveBadge:badgeClick.currentBackgroundImage];
+    [self.navigationController pushViewController:_badgeViewController animated:YES];
+    
 }
 
 -(void)alterPic{
@@ -101,17 +141,27 @@
     //定义一个newPhoto，用来存放我们选择的图片。
     UIImage *newPhoto = [info objectForKey:@"UIImagePickerControllerEditedImage"];
     [self showAvatar:newPhoto];
+    //存储照片
+    [NJUAvatarUserDefaults saveAvatar:newPhoto];
     [self dismissViewControllerAnimated:YES completion:^{}];
 }
 
-/*
+
 #pragma mark - Navigation
 
 // In a storyboard-based application, you will often want to do a little preparation before navigation
-- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
-    // Get the new view controller using [segue destinationViewController].
-    // Pass the selected object to the new view controller.
-}
-*/
+//- (void)prepareForSegue:(UIStoryboardSegue *)segue sender:(id)sender {
+//    // 在控制台打印Segue的信息
+//    NSLog(@"Source Controller = %@", [segue sourceViewController]);
+//    NSLog(@"Destination Controller = %@", [segue destinationViewController]);
+//    NSLog(@"Segue Identifier = %@", [segue identifier]);
+//    
+//    // 判断是哪个segue被执行了，并执行相应的操作
+//    if ([[segue identifier] isEqualToString:@"badgeListSegue"]) {
+//        NJUBadgeTableViewController *badgeTableViewController = [segue destinationViewController];
+//        badgeTableViewController.avatarImageName = @"hha";
+//    }
+//}
+
 
 @end

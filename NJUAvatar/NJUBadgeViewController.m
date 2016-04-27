@@ -7,8 +7,9 @@
 //
 
 #import "NJUBadgeViewController.h"
-#import "ViewController.h"
+#import "NJUAvatarViewController.h"
 #import <SVProgressHUD/SVProgressHUD.h>
+#import "NJUAvatarUserDefaults.h"
 
 @interface NJUBadgeViewController ()<UIGestureRecognizerDelegate>
 @property (weak, nonatomic) IBOutlet UIImageView *badegImageView;
@@ -19,7 +20,8 @@
 @property (assign, nonatomic) CGFloat scale;
 @property (weak, nonatomic) IBOutlet UIButton *cancelBtn;
 
-@property (weak, nonatomic)ViewController *viewController;
+@property(weak,nonatomic)NJUAvatarViewController *avatarViewController;
+
 @end
 
 @implementation NJUBadgeViewController
@@ -35,8 +37,10 @@
     [self saveImageToPhotosAlbum:resultingImage];
 }
 - (IBAction)cancel:(id)sender {
-    ViewController *viewController= [self.storyboard instantiateViewControllerWithIdentifier:@"viewController"];
-    [self presentViewController:viewController animated:YES completion:nil];
+//    ViewController *viewController= [self.storyboard instantiateViewControllerWithIdentifier:@"viewController"];
+//    [self presentViewController:viewController animated:YES completion:nil];
+    //获取storyboard: 通过bundle根据storyboard的名字来获取我们的storyboard,
+    [self.navigationController popToRootViewControllerAnimated:true];
 }
 
 // 保存图片
@@ -52,10 +56,12 @@
     }else{
         // 保存图片成功
         [SVProgressHUD showSuccessWithStatus:@"保存成功"];
-        _viewController = [self.storyboard instantiateViewControllerWithIdentifier:@"viewController"];
-        [self presentViewController:_viewController animated:YES completion:^{
-            [SVProgressHUD dismiss];
-        }];
+//        _avatarViewController = [self.storyboard instantiateViewControllerWithIdentifier:@"NJUAvatarViewController"];
+//        [self.navigationController presentViewController:_avatarViewController animated:YES completion:^{
+//            [_avatarViewController showAvatar:_avatarImageView.image];
+//            
+//        }];
+        [self.navigationController popToRootViewControllerAnimated:true];
     }
 }
 - (void)pinch:(id)sender {
@@ -116,6 +122,9 @@
     // Do any additional setup after loading the view.
     //[self setHeadPortrait];
     self.avatarView.backgroundColor = [UIColor whiteColor];
+    self.badegImageView.image = [NJUAvatarUserDefaults badge];
+    self.avatarImageView.image = [NJUAvatarUserDefaults avatar];
+    [self setHeadPortrait];
 }
 
 - (void)didReceiveMemoryWarning {
