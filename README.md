@@ -113,3 +113,119 @@ PickerImage.delegate = self;
 3. 现在照片缩放的圆形区域比较小，两个手指缩放不方便；需要再扩大些，或者支持双击整个图片放大再缩放，有待商榷
 4. 图片展示会有卡住的情况，需要优化
 5. 目前界面还比较丑，交互方面继续优化
+
+#校徽头像version2
+在上一版demo实现可以选取照片库图片，可以对照片放大、缩小、拖动完成一个校徽头像的基础上，考虑实际应用场景，对交互过程进行修改，实现version2。
+##多个校徽展示
+考虑到实际场景中，会有很多的校徽需要展示给用户，鉴于用户不仅仅选择自己学校的，他也会有兴趣将自己的头像放到其他学校的校徽上，所以需要支持用户可以浏览所有学校校徽并可以多次尝试。
+
+1. 启发1：美拍和Faceu中对图片修饰时，会在图片的的下方展示一系列素材，用户通过橫滑可以浏览到所有素材；这种交互简单直观，但是对于校徽展示来说，有两个弊端，一个是校徽比较抽象，如果看不清上面的字母，光靠标志来辨认还是有难度的，可见不能所得；另一个是校徽会有很多，如果是通过橫滑浏览，用户需要滑动多次，会引起疲劳。
+2. 启发2：通过列表展示所有校徽，起初考虑选用collectionView网格状式作为展示，但基于第一点的分析，校徽不容易辨认，所以换成文字作为主要，图片作为辅助利用tableView作为展示，为了便于查找，采用带索引展示。
+
+##运行结果展示
+![运行结果](http://7xrh2s.com1.z0.glb.clouddn.com/iosNJUAvatar_Version2.gif)
+
+##学习的技术点
+###scrollView
+在底栏的校徽展示采用scrollView实现，[理解iOS开发中的scrollView](http://mobile.51cto.com/hot-430409.htm)这篇文章中解释scrollView工作原理，每个视图都有一个bounds和frame，视图的frame决定了自己在父视图中绘制的位置，frame的origin表明了视图左上角相对父视图左上角的偏移量，bounds表示该视图在其自身坐标系中的位置和大小。如下图:
+![bounds&frame](http://7xrh2s.com1.z0.glb.clouddn.com/iosbounds%26frame.png)
+scrollView的属性contentOffset决定了当前scrollView显示内容的范围，即是当前scrollView的左上角的显示位置坐标，相当于它改变scrollView.bounds的origin,使得scrollView基于自身的坐标系发生了位置偏移，其代码类似于
+
+~~~
+- (void)setContentOffset: (CGPoint)contentOffset
+ {
+    _contentOffset = contentOffset;
+    CGRect bounds = self.bounds;
+    bounds.origin = contentOffset;
+    self.bounds = bounds;
+ }
+~~~
+scrollView的属性contentSize决定了scrollView显示内容的尺寸范围，在contentSize的宽度或者长度大于bounds的时候，才能实现滚动效果。content offset的最大值是contentSize和scrollView size的差。需要在代码中实现
+
+~~~
+[_scrollView setContentSize:CGSizeMake(630, 100)];
+~~~
+scrollView的contentInset属性可以改变contentOffset的最大和最小值，这样便可以滚动出可滚动区域。它的类型为UIEdgeInsets，包含四个值： {top，left，bottom，right}。具体可以看[scrollView实现](http://www.jianshu.com/p/bd0023af0c9a)
+
+###tableView中实现首字母索引
+这边是用到了UILocalizedIndexedCollation进行首字母排序，借鉴苹果官方例子[Apple UITableView sampleCode](https://developer.apple.com/library/ios/samplecode/TableViewSuite/Introduction/Intro.html#//apple_ref/doc/uid/DTS40007318-Intro-DontLinkElementID_2)中的第三个simpleIndexedTableView
+UILocalizedIndexedCollation的分组排序是建立在对对象的操作上，在这个项目中，建立校徽对象
+
+~~~
+@interface NJUBadge : NSObject
+@property(nonatomic,strong)NSString *name;
+@property(nonatomic,strong)NSString *imageName;
+- (instancetype)initWithName:(NSString *)name image:(NSString*)imageName;
+@end
+~~~
+校徽对象数组是放在plist中
+![badgePlist](http://7xrh2s.com1.z0.glb.clouddn.com/iosbadgesPlist.png)
+
+~~~
+//获取plist中数据
+NSBundle *bundle = [NSBundle mainBundle];
+NSString *plistpath = [bundle pathForResource:@"badges" ofType:@"plist"];
+_badgeList = [[NSArray alloc]initWithContentsOfFile:plistpath];
+~~~
+将UILocalizedIndexedCollation进行初始化
+
+~~~
+//会根据不同国家的语言初始化出不同的结果如中文和英文的得到的就是A~Z和#
+UILocalizedIndexedCollation *collation = [UILocalizedIndexedCollation currentCollation];
+~~~
+
+将数据按照首字母分类放入各个数组中
+
+~~~
+for (NSInteger index = 0; index < [[_collation sectionTitles] count]; index++)
+{
+   NSMutableArray *array = [[NSMutableArray alloc] init];
+   [_newSectionsArray addObject:array];
+}
+for (NSInteger index = 0; index < [_badgeList count]; index++)
+{
+    NSDictionary *badgeItemDic = _badgeList[index];
+    NSString *badgeName = [badgeItemDic objectForKey:@"name"];
+    NSString *badgeImageName = [badgeItemDic objectForKey:@"image"];
+    NJUBadge *badgeItem = [[NJUBadge alloc]initWithName:badgeName image:badgeImageName]; 
+    NSInteger sectionNumber = [_collation sectionForObject:badgeItem collationStringSelector:@selector(name)];
+    [_newSectionsArray[sectionNumber] addObject:badgeItem];
+}
+~~~
+
+对每个数组中数据进行排序
+
+~~~
+for (NSInteger index = 0; index < [[_collation sectionTitles] count]; index++) 
+{
+    NSMutableArray *badgeArrayForSection = _newSectionsArray[index];
+    NSArray *sortedPersonArrayForSection = [_collation sortedArrayFromArray:badgeArrayForSection collationStringSelector:@selector(name)];
+    _newSectionsArray[index] = sortedPersonArrayForSection;
+}
+~~~
+从collation中获取section的titles和indexTitles
+
+~~~
+- (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+    return _collation.sectionTitles[section];
+}
+
+- (NSArray *)sectionIndexTitlesForTableView:(UITableView *)tableView {
+    return _collation.sectionIndexTitles;
+}
+
+- (NSInteger)tableView:(UITableView *)tableView sectionForSectionIndexTitle:(NSString *)title atIndex:(NSInteger)index {
+    return [_collation sectionForSectionIndexTitleAtIndex:index];
+}
+~~~
+
+##参考
+[理解iOS开发中的Scroll View](http://mobile.51cto.com/hot-430409.htm)
+
+[理解UIScrollView](http://blog.jobbole.com/70143/)
+
+[Apple NavigationBar sampleCode](https://developer.apple.com/library/ios/samplecode/NavBar/Introduction/Intro.html#//apple_ref/doc/uid/DTS40007418)
+
+[Apple UITableView sampleCode](https://developer.apple.com/library/ios/samplecode/TableViewSuite/Introduction/Intro.html#//apple_ref/doc/uid/DTS40007318-Intro-DontLinkElementID_2)
+
+[UI设计](http://ui4app.com/category)
